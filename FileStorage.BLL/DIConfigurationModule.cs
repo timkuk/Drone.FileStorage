@@ -4,7 +4,7 @@ using FileStorage.DAL.Repositories;
 
 namespace FileStorage.BLL
 {
-    public class DIConfigurationModule : Module
+    public class DiConfigurationModule : Module
     {
         protected override void Load(ContainerBuilder builder)
         {

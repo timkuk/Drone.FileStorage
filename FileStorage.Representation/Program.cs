@@ -10,15 +10,17 @@ namespace FileStorage.Representation
     {
         private static readonly log4net.ILog Log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod()?.DeclaringType);
 
+
         private static void Main()
         {
             var builder = new ContainerBuilder();
             builder
                 .RegisterModule<ContainerConfig>()
-                .RegisterModule<DIConfigurationModule>();
+                .RegisterModule<DiConfigurationModule>();
             Log.Error("Start");
             var container = builder.Build();
             var service = container.Resolve<IParserService>();
+
             while (true)
             {
                 try

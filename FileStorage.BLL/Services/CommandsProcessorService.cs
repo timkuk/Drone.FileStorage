@@ -57,8 +57,8 @@ namespace FileStorage.BLL.Services
 
                     foreach (var file in filesByConditions)
                     {
+                        Console.WriteLine($"File {file.Name} has been removed . Size {file.Length}");
                         _fileStorage.RemoveFile(file);
-                        Console.WriteLine($"File {file.Name} has been removed");
                         Log.Info($"Files {file.Name} has been removed");
                     }
                     break;

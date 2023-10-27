@@ -22,14 +22,21 @@ namespace FileStorage.BLL.Services
         public FileInfo[] GetFilesWithConditions(Dictionary<string, string> commandsMap, DirectoryInfo directoryInfo)
         {
             var parseMaxFileSize = commandsMap.SingleOrDefault(c => c is { Key: "s" }).Value;
-            var maxFileSize = ConvertSizeToBytes(parseMaxFileSize);
+            var parseMaxFilesCount = commandsMap.SingleOrDefault(c => c.Key == "c").Value;
 
-            var parseMaxFilesCount = commandsMap.SingleOrDefault(c => c .Key == "c").Value;
+            if (parseMaxFileSize == null && parseMaxFilesCount == null)
+            {
+                Console.WriteLine("Input parameters count files and max file size");
+
+                return Array.Empty<FileInfo>();
+            }
+
+            var maxFileSize = ConvertSizeToBytes(parseMaxFileSize);
             var maxFilesCount = int.Parse(parseMaxFilesCount);
 
             var files = _directoryRepository.GetInformationAboutAllFilesInDirectory(directoryInfo);
 
-            var filteredFiles = FilterFiles(files, maxFileSize, maxFilesCount);
+            var filteredFiles = FilterFilesForRemove(files, maxFileSize, maxFilesCount);
 
             return filteredFiles;
         }
@@ -37,7 +44,7 @@ namespace FileStorage.BLL.Services
 
         private static long ConvertSizeToBytes(string input)
         {
-            var match = Regex.Match(input, @"(\d+)\s*(GB|MB|KB)", RegexOptions.IgnoreCase);
+            var match = Regex.Match(input, @"(\d+)\s*(GB|MB|KB|B)", RegexOptions.IgnoreCase);
 
             if (!long.TryParse(match.Groups[1].Value, out var size))
             {
@@ -56,21 +63,38 @@ namespace FileStorage.BLL.Services
             };
         }
 
-        private static FileInfo[] FilterFiles(FileInfo[] files, long? maxFileSize, int? maxFileCount)
+        private static FileInfo[] FilterFilesForRemove(
+            IReadOnlyCollection<FileInfo> files,
+            long? maxFileSize,
+            int? maxFileCount)
         {
-            var filteredFiles = files;
+            var filterFilesForRemove = Array.Empty<FileInfo>();
+            var hasFilesToRemove = files.Count > maxFileCount;
+
+            if (maxFileCount.HasValue && hasFilesToRemove)
+            {
+                filterFilesForRemove = files
+                    .OrderByDescending(file => file.CreationTime)
+                    .Take(files.Count - maxFileCount.Value)
+                    .ToArray();
+            }
 
             if (maxFileSize.HasValue)
             {
-                filteredFiles = files.Where(file => file.Length <= maxFileSize.Value).ToArray();
+                if (!filterFilesForRemove.Any())
+                {
+                    return files.Where(file => file.Length >= maxFileSize.Value).ToArray();
+                }
+
+                var filterFilesByMaxSize = filterFilesForRemove.Where(file => file.Length >= maxFileSize.Value).ToArray();
+
+                if (filterFilesByMaxSize.Any())
+                {
+                    filterFilesForRemove = filterFilesByMaxSize;
+                }
             }
 
-            if (maxFileCount.HasValue)
-            {
-                filteredFiles = files.Take(maxFileCount.Value).ToArray();
-            }
-
-            return filteredFiles;
+            return filterFilesForRemove;
         }
     }
 }
